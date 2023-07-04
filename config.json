@@ -105,7 +105,7 @@
 		"ScanMaxRTT": 5000,
 		"RecordLimit": 10000,
 		"OutputSeparator": "\r\n",
-		"InputFile": "./iprange_gws_a.txt",
+		"InputFile": "iprange/iprange_gws_a.txt",
 		"OutputFile": "./out_gws_a.txt",
 		// 1: 测试 tls 连接并握手成功
 		// 2: 证书验证: VerifyCommonName
