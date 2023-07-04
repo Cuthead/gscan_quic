@@ -21,3 +21,5 @@ gscan_quic/
 backup/
 
 *.user.json
+
+ip[0-9].txt
