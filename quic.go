@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	quic "github.com/quic-go/quic-go"
@@ -19,6 +19,8 @@ import (
 var errNoSuchBucket = []byte("<?xml version='1.0' encoding='UTF-8'?><Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist.</Message></Error>")
 
 func testQuic(ip string, config *ScanConfig, record *ScanRecord) bool {
+	var VerifyCN = config.VerifyCommonName
+	var Code = config.ValidStatusCode
 	start := time.Now()
 
 	udpConn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4zero, Port: 0})
@@ -66,8 +68,9 @@ func testQuic(ip string, config *ScanConfig, record *ScanRecord) bool {
 
 	// lv2 验证证书是否正确
 	if config.Level > 1 {
-		pkp := pcs[1].RawSubjectPublicKeyInfo
-		if !bytes.Equal(g2pkp, pkp) && !bytes.Equal(g3pkp, pkp) { // && !bytes.Equal(g3ecc, pkp[:]) {
+		CN := pcs[0].DNSNames[0]
+		if CN != VerifyCN {
+			fmt.Println("CN:", CN)
 			return false
 		}
 	}
@@ -91,7 +94,10 @@ func testQuic(ip string, config *ScanConfig, record *ScanRecord) bool {
 		req, _ := http.NewRequest(http.MethodGet, url, nil)
 		req.Close = true
 		resp, _ := hclient.Do(req)
-		if resp == nil || (resp.StatusCode < 200 || resp.StatusCode >= 400) || !strings.Contains(resp.Header.Get("Alt-Svc"), `quic=":443"`) {
+		if resp == nil || resp.StatusCode != Code {
+			if resp != nil {
+				fmt.Println("Status Code:", resp.StatusCode)
+			}
 			return false
 		}
 		if resp.Body != nil {
