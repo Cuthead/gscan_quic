@@ -18,7 +18,13 @@ import (
 
 var errNoSuchBucket = []byte("<?xml version='1.0' encoding='UTF-8'?><Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist.</Message></Error>")
 
-func testQuic(ip string, config *ScanConfig, record *ScanRecord) bool {
+func testQuic(ip string, config *ScanConfig, record *ScanRecord) (success bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			success = false
+		}
+	}()
+
 	var VerifyCN = config.VerifyCommonName
 	var Code = config.ValidStatusCode
 	start := time.Now()
@@ -54,7 +60,12 @@ func testQuic(ip string, config *ScanConfig, record *ScanRecord) bool {
 	if err != nil {
 		return false
 	}
-	defer quicSessn.CloseWithError(0, "")
+	defer func() {
+		err := quicSessn.CloseWithError(0, "")
+		if err != nil {
+			fmt.Println("Error closing QUIC session:", err)
+		}
+	}()
 
 	// lv1 只会验证证书是否存在
 	cs := quicSessn.ConnectionState().TLS
@@ -78,7 +89,12 @@ func testQuic(ip string, config *ScanConfig, record *ScanRecord) bool {
 	// lv3 使用 http 访问来验证
 	if config.Level > 2 {
 		tr := &http3.RoundTripper{DisableCompression: true}
-		defer tr.Close()
+		defer func() {
+			err := tr.Close()
+			if err != nil {
+				fmt.Println("Error closing HTTP/3 transport:", err)
+			}
+		}()
 		tr.Dial = func(ctx context.Context, addr string, tlsCfg *tls.Config, cfg *quic.Config) (quic.EarlyConnection, error) {
 			return quicSessn, err
 		}
@@ -101,7 +117,12 @@ func testQuic(ip string, config *ScanConfig, record *ScanRecord) bool {
 			return false
 		}
 		if resp.Body != nil {
-			defer resp.Body.Close()
+			defer func() {
+				err := resp.Body.Close()
+				if err != nil {
+					fmt.Println("Error closing response body:", err)
+				}
+			}()
 			// lv4 验证是否是 NoSuchBucket 错误
 			if config.Level > 3 && resp.Header.Get("Content-Type") == "application/xml; charset=UTF-8" { // 也许条件改为 || 更好
 				body, err := ioutil.ReadAll(resp.Body)
