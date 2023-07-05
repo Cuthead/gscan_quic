@@ -1,13 +1,10 @@
 module codeberg.org/antigng/gscan_quic
 
-go 1.20
+go 1.21
 
 require (
 	github.com/mikioh/ipaddr v0.0.0-20190404000644-d465c8ab6721
-	github.com/onsi/ginkgo v1.16.1 // indirect
-	github.com/onsi/gomega v1.11.0 // indirect
-	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2 // indirect
-	golang.org/x/net v0.0.0-20210414194228-064579744ee0 // indirect
+	github.com/quic-go/quic-go v0.36.1-0.20230701190300-fd0c9bbf9e1f
 )
 
 require (
@@ -17,7 +14,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.9.5 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
 	github.com/quic-go/qtls-go1-19 v0.3.2 // indirect
-	github.com/quic-go/qtls-go1-20 v0.2.2 // indirect
+	github.com/quic-go/qtls-go1-20 v0.3.0 // indirect
 	golang.org/x/crypto v0.4.0 // indirect
 	golang.org/x/exp v0.0.0-20221205204356-47842c84f3db // indirect
 	golang.org/x/mod v0.10.0 // indirect
