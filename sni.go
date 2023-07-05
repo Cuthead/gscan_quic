@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"math/rand"
@@ -9,7 +10,7 @@ import (
 	"time"
 )
 
-func testSni(ip string, config *ScanConfig, record *ScanRecord) bool {
+func testSni(ctx context.Context, ip string, config *ScanConfig, record *ScanRecord) bool {
 	tlscfg := &tls.Config{
 		InsecureSkipVerify: true,
 	}
@@ -38,7 +39,11 @@ func testSni(ip string, config *ScanConfig, record *ScanRecord) bool {
 
 	for _, serverName := range config.ServerName {
 		start := time.Now()
-		conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, "443"), config.ScanMaxRTT)
+
+		ctx, cancel := context.WithTimeout(ctx, config.ScanMaxRTT)
+		defer cancel()
+
+		conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", net.JoinHostPort(ip, "443"))
 		if err != nil {
 			return false
 		}
@@ -77,7 +82,7 @@ func testSni(ip string, config *ScanConfig, record *ScanRecord) bool {
 			}
 			// io.Copy(os.Stdout, resp.Body)
 			// if resp.Body != nil {
-			// 	io.Copy(ioutil.Discard, resp.Body)
+			// 	io.Copy(io.Discard, resp.Body)
 			// 	resp.Body.Close()
 			// }
 			if resp.StatusCode != Code {

@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
@@ -18,34 +17,22 @@ import (
 
 var errNoSuchBucket = []byte("<?xml version='1.0' encoding='UTF-8'?><Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist.</Message></Error>")
 
-func testQuic(ip string, config *ScanConfig, record *ScanRecord) (success bool) {
-	defer func() {
-		if r := recover(); r != nil {
-			success = false
-		}
-	}()
+func testQuic(ctx context.Context, ip string, config *ScanConfig, record *ScanRecord) bool {
 
 	var VerifyCN = config.VerifyCommonName
 	var Code = config.ValidStatusCode
 	start := time.Now()
-
-	udpConn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4zero, Port: 0})
-	if err != nil {
-		return false
-	}
-	udpConn.SetDeadline(time.Now().Add(config.ScanMaxRTT))
-	defer udpConn.Close()
 
 	quicCfg := &quic.Config{
 		HandshakeIdleTimeout: config.HandshakeTimeout,
 		KeepAlivePeriod:      0,
 	}
 
-	var serverName string
+	serverName := ""
 	if len(config.ServerName) == 0 {
 		serverName = randomHost()
 	} else {
-		serverName = config.ServerName[rand.Intn(len(config.ServerName))]
+		serverName = randomChoice(config.ServerName)
 	}
 
 	tlsCfg := &tls.Config{
@@ -54,30 +41,28 @@ func testQuic(ip string, config *ScanConfig, record *ScanRecord) (success bool) 
 		NextProtos:         []string{"h3-29", "h3", "hq", "quic"},
 	}
 
-	ctx := context.TODO()
-	udpAddr := &net.UDPAddr{IP: net.ParseIP(ip), Port: 443}
-	quicSessn, err := quic.DialEarly(ctx, udpConn, udpAddr, tlsCfg, quicCfg)
+	ctx, cancel := context.WithTimeout(ctx, config.ScanMaxRTT)
+	defer cancel()
+
+	quicConn, err := quic.DialAddrEarly(ctx, net.JoinHostPort(ip, "443"), tlsCfg, quicCfg)
 	if err != nil {
 		return false
 	}
 	defer func() {
-		err := quicSessn.CloseWithError(0, "")
+		err := quicConn.CloseWithError(0, "")
 		if err != nil {
 			fmt.Println("Error closing QUIC session:", err)
 		}
 	}()
 
 	// lv1 只会验证证书是否存在
-	cs := quicSessn.ConnectionState().TLS
-	if !cs.HandshakeComplete {
-		return false
-	}
-	pcs := cs.PeerCertificates
-	if len(pcs) < 2 {
+	cs := quicConn.ConnectionState().TLS
+	if !cs.HandshakeComplete || len(cs.PeerCertificates) < 2 {
 		return false
 	}
 
 	// lv2 验证证书是否正确
+	pcs := cs.PeerCertificates
 	if config.Level > 1 {
 		CN := pcs[0].DNSNames[0]
 		if CN != VerifyCN {
@@ -96,7 +81,7 @@ func testQuic(ip string, config *ScanConfig, record *ScanRecord) (success bool) 
 			}
 		}()
 		tr.Dial = func(ctx context.Context, addr string, tlsCfg *tls.Config, cfg *quic.Config) (quic.EarlyConnection, error) {
-			return quicSessn, err
+			return quicConn, err
 		}
 		// 设置超时
 		hclient := &http.Client{
@@ -125,12 +110,12 @@ func testQuic(ip string, config *ScanConfig, record *ScanRecord) (success bool) 
 			}()
 			// lv4 验证是否是 NoSuchBucket 错误
 			if config.Level > 3 && resp.Header.Get("Content-Type") == "application/xml; charset=UTF-8" { // 也许条件改为 || 更好
-				body, err := ioutil.ReadAll(resp.Body)
+				body, err := io.ReadAll(resp.Body)
 				if err != nil || bytes.Equal(body, errNoSuchBucket) {
 					return false
 				}
 			} else {
-				io.Copy(ioutil.Discard, resp.Body)
+				io.Copy(io.Discard, resp.Body)
 			}
 		}
 	}
