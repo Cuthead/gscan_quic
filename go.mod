@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/mikioh/ipaddr v0.0.0-20190404000644-d465c8ab6721
-	github.com/quic-go/quic-go v0.36.1-0.20230701190300-fd0c9bbf9e1f
+	github.com/quic-go/quic-go v0.40.0
 )
 
 require (
