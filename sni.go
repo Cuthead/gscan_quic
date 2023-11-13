@@ -64,7 +64,7 @@ func testSni(ctx context.Context, ip string, config *ScanConfig, record *ScanRec
 			}
 		}
 		if config.Level > 2 {
-			req, err := http.NewRequest(http.MethodHead, "https://"+ip+Path, nil)
+			req, err := http.NewRequest(http.MethodHead, "https://"+"["+ip+"]"+Path, nil)
 			req.Host = Host
 			if err != nil {
 				tlsconn.Close()
