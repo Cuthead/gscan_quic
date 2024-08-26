@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"time"
@@ -152,6 +153,7 @@ func Pinger(address string, timeout time.Duration) error {
 
 	c, err := net.Dial(network, address)
 	if err != nil {
+		fmt.Println(err)
 		return ErrPingConnFailed
 	}
 	defer c.Close()
