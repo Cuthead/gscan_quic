@@ -78,7 +78,7 @@ func splitIP(strline string) []ipaddr.Prefix {
 		if c, err := ipaddr.Parse(strline); err == nil {
 			p := c.List()[0]
 
-			if p.IP.To16() != nil { // 判断是否为IPv6地址
+			if p.IP.To4() == nil && p.IP.To16() != nil { // 判断是否为IPv6地址
 				newPrefixLength := 112 // /64 + 48 = /112
 
 				base := p.IP
