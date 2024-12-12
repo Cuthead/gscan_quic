@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"math/rand"
 	"net"
 	"os"
@@ -76,46 +75,6 @@ func splitIP(strline string) []ipaddr.Prefix {
 	} else if strings.Contains(strline, "/") {
 		// "xxx.xxx.xxx.xxx/xx"
 		if c, err := ipaddr.Parse(strline); err == nil {
-			p := c.List()[0]
-
-			if p.IP.To4() == nil && p.IP.To16() != nil { // 判断是否为IPv6地址
-				newPrefixLength := 112 // /64 + 48 = /112
-
-				base := p.IP
-				var prefixes []*ipaddr.Prefix
-
-				for i := 0; i <= 0xffff; i++ {
-					ip := net.ParseIP(base.String())
-					if ip == nil {
-						fmt.Println("Error parsing IP:", base.String())
-						continue
-					}
-
-					// 设置最后 16 位
-					ip[14] = byte(i >> 8)  // 高8位
-					ip[15] = byte(i & 0xff) // 低8位
-
-					// 使用 CIDR 表示法构造新的前缀
-					prefixStr := fmt.Sprintf("%s/%d", ip.String(), newPrefixLength)
-					prefix, err := ipaddr.Parse(prefixStr)
-					if err != nil {
-						fmt.Printf("Failed to parse Prefix for IPNet: %s\n", prefixStr)
-						continue
-					}
-					for _, p := range prefix.List() {
-						prefixes = append(prefixes, &p) // 将每个元素的地址添加到切片中
-					}
-				}
-
-				// 将前缀从指针列表转换为值类型列表
-				result := make([]ipaddr.Prefix, 0, len(prefixes))
-				for _, p := range prefixes {
-					if p != nil {
-						result = append(result, *p)
-					}
-				}
-				return result
-			}
 			return c.List()
 		}
 		return nil
