@@ -57,7 +57,7 @@ func testQuic(ctx context.Context, ip string, config *ScanConfig, record *ScanRe
 
 	// lv1 只会验证证书是否存在
 	cs := quicConn.ConnectionState().TLS
-	if !cs.HandshakeComplete || len(cs.PeerCertificates) < 2 {
+	if !cs.HandshakeComplete || len(cs.PeerCertificates) == 0 {
 		return false
 	}
 
