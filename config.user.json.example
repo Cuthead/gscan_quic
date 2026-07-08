@@ -2,10 +2,17 @@
 	"ScanWorker": 100,
 	"VerifyPing": false,
 	"ScanMinPingRTT": 80,
-	"ScanMaxPingRTT": 800,	
-	
+	"ScanMaxPingRTT": 800,
+
 	"ScanMode":   "quic",
-	
+
+	// LogLevel controls how much failure detail gets logged (successful hits
+	// are always logged). 1 = hits only (default), 2 = + HTTP status-code
+	// failures, 3 = + certificate/CommonName failures, 4 = + TLS
+	// connect/handshake failures, 5 = + ping failures. Tools that need to
+	// tell "not tested" apart from "tested and failed" (e.g. gwsdb) want 5.
+	//"LogLevel": 1,
+
 	"Ping": {
 		//"ScanCountPerIP":  1,
 		//"ScanMinRTT":      0,

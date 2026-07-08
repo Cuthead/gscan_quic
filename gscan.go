@@ -41,6 +41,7 @@ type GScanner struct {
 	DisablePause   bool
 	EnableBackup   bool
 	BackupDir      string
+	LogLevel       int
 
 	ScanRecords `json:"-"`
 
@@ -145,6 +146,11 @@ func main() {
 		log.Println(err)
 		return
 	}
+
+	if scanner.LogLevel <= 0 {
+		scanner.LogLevel = 1
+	}
+	LogLevel = scanner.LogLevel
 
 	scanMode := scanner.ScanMode
 	cfg, _ := scanner.getScanConfig(scanMode)

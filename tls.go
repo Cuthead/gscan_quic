@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"math/rand"
 	"net"
@@ -23,6 +24,7 @@ func testTls(ctx context.Context, ip string, config *ScanConfig, record *ScanRec
 	var dialer net.Dialer
 	conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(ip, "443"))
 	if err != nil {
+		logFail(4, ip, "dial", err.Error())
 		return false
 	}
 	defer conn.Close()
@@ -51,23 +53,28 @@ func testTls(ctx context.Context, ip string, config *ScanConfig, record *ScanRec
 
 	tlsconn.SetDeadline(time.Now().Add(config.HandshakeTimeout))
 	if err = tlsconn.Handshake(); err != nil {
+		logFail(4, ip, "handshake", fmt.Sprintf("sni=%s error=%s", serverName, err.Error()))
 		return false
 	}
 	if config.Level > 1 {
 		pcs := tlsconn.ConnectionState().PeerCertificates
 		if pcs == nil || len(pcs) < 2 {
+			logFail(3, ip, "cn", fmt.Sprintf("sni=%s error=missing intermediate certificate", serverName))
 			return false
 		}
 		if org := pcs[1].Subject.Organization; len(org) == 0 || org[0] != "Google Trust Services LLC" {
+			logFail(3, ip, "cn", fmt.Sprintf("sni=%s error=unexpected issuer organization", serverName))
 			return false
 		}
 		pkp := pcs[1].RawSubjectPublicKeyInfo
 		if !bytes.Equal(gpkp, pkp) {
+			logFail(3, ip, "cn", fmt.Sprintf("sni=%s error=issuer public key mismatch", serverName))
 			return false
 		}
 	}
 	if config.Level > 2 {
-		url := "https://" + config.HTTPVerifyHosts[rand.Intn(len(config.HTTPVerifyHosts))]
+		host := config.HTTPVerifyHosts[rand.Intn(len(config.HTTPVerifyHosts))]
+		url := "https://" + host
 		req, _ := http.NewRequest(http.MethodGet, url, nil)
 		req.Close = true
 		c := http.Client{
@@ -81,6 +88,11 @@ func testTls(ctx context.Context, ip string, config *ScanConfig, record *ScanRec
 		}
 		resp, _ := c.Do(req)
 		if resp == nil || (resp.StatusCode < 200 || resp.StatusCode >= 400) {
+			detail := fmt.Sprintf("sni=%s host=%s error=no response", serverName, host)
+			if resp != nil {
+				detail = fmt.Sprintf("sni=%s host=%s got_code=%d", serverName, host, resp.StatusCode)
+			}
+			logFail(2, ip, "status", detail)
 			return false
 		}
 		if resp.Body != nil {

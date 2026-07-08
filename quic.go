@@ -46,6 +46,7 @@ func testQuic(ctx context.Context, ip string, config *ScanConfig, record *ScanRe
 
 	quicConn, err := quic.DialAddrEarly(ctx, net.JoinHostPort(ip, "443"), tlsCfg, quicCfg)
 	if err != nil {
+		logFail(4, ip, "dial", fmt.Sprintf("sni=%s error=%s", serverName, err.Error()))
 		return false
 	}
 	defer func() {
@@ -58,6 +59,7 @@ func testQuic(ctx context.Context, ip string, config *ScanConfig, record *ScanRe
 	// lv1 只会验证证书是否存在
 	cs := quicConn.ConnectionState().TLS
 	if !cs.HandshakeComplete || len(cs.PeerCertificates) == 0 {
+		logFail(4, ip, "handshake", fmt.Sprintf("sni=%s error=no peer certificates", serverName))
 		return false
 	}
 
@@ -66,7 +68,7 @@ func testQuic(ctx context.Context, ip string, config *ScanConfig, record *ScanRe
 	if config.Level > 1 {
 		CN := pcs[0].DNSNames[0]
 		if CN != VerifyCN {
-			fmt.Println("CN:", CN)
+			logFail(3, ip, "cn", fmt.Sprintf("sni=%s want_cn=%s got_cn=%s", serverName, VerifyCN, CN))
 			return false
 		}
 	}
@@ -91,14 +93,17 @@ func testQuic(ctx context.Context, ip string, config *ScanConfig, record *ScanRe
 			},
 			Timeout: config.ScanMaxRTT - time.Since(start),
 		}
-		url := "https://" + config.HTTPVerifyHosts[rand.Intn(len(config.HTTPVerifyHosts))]
+		host := config.HTTPVerifyHosts[rand.Intn(len(config.HTTPVerifyHosts))]
+		url := "https://" + host
 		req, _ := http.NewRequest(http.MethodGet, url, nil)
 		req.Close = true
 		resp, _ := hclient.Do(req)
 		if resp == nil || resp.StatusCode != Code {
+			detail := fmt.Sprintf("sni=%s host=%s error=no response", serverName, host)
 			if resp != nil {
-				fmt.Println("Status Code:", resp.StatusCode)
+				detail = fmt.Sprintf("sni=%s host=%s got_code=%d", serverName, host, resp.StatusCode)
 			}
+			logFail(2, ip, "status", detail)
 			return false
 		}
 		if resp.Body != nil {
@@ -112,6 +117,7 @@ func testQuic(ctx context.Context, ip string, config *ScanConfig, record *ScanRe
 			if config.Level > 3 && resp.Header.Get("Content-Type") == "application/xml; charset=UTF-8" { // 也许条件改为 || 更好
 				body, err := io.ReadAll(resp.Body)
 				if err != nil || bytes.Equal(body, errNoSuchBucket) {
+					logFail(2, ip, "status", fmt.Sprintf("sni=%s host=%s error=NoSuchBucket body", serverName, host))
 					return false
 				}
 			} else {

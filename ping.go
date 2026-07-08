@@ -19,6 +19,7 @@ import (
 func testPing(ctx context.Context, ip string, config *ScanConfig, record *ScanRecord) bool {
 	start := time.Now()
 	if err := Pinger(ip, config.ScanMaxRTT); err != nil {
+		logFail(5, ip, "ping", err.Error())
 		return false
 	}
 	if rtt := time.Since(start); rtt > config.ScanMinRTT {

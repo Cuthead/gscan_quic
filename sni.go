@@ -45,6 +45,7 @@ func testSni(ctx context.Context, ip string, config *ScanConfig, record *ScanRec
 
 		conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", net.JoinHostPort(ip, "443"))
 		if err != nil {
+			logFail(4, ip, "dial", fmt.Sprintf("sni=%s error=%s", serverName, err.Error()))
 			return false
 		}
 
@@ -52,13 +53,18 @@ func testSni(ctx context.Context, ip string, config *ScanConfig, record *ScanRec
 		tlsconn := tls.Client(conn, tlscfg)
 		tlsconn.SetDeadline(time.Now().Add(config.HandshakeTimeout))
 		if err = tlsconn.Handshake(); err != nil {
+			logFail(4, ip, "handshake", fmt.Sprintf("sni=%s error=%s", serverName, err.Error()))
 			tlsconn.Close()
 			return false
 		}
 		if config.Level > 1 {
 			pcs := tlsconn.ConnectionState().PeerCertificates
-			if len(pcs) == 0 || pcs[0].Subject.CommonName != VerifyCN {
-				fmt.Println("CN:", pcs[0].Subject.CommonName)
+			gotCN := ""
+			if len(pcs) > 0 {
+				gotCN = pcs[0].Subject.CommonName
+			}
+			if len(pcs) == 0 || gotCN != VerifyCN {
+				logFail(3, ip, "cn", fmt.Sprintf("sni=%s want_cn=%s got_cn=%s", serverName, VerifyCN, gotCN))
 				tlsconn.Close()
 				return false
 			}
@@ -67,16 +73,15 @@ func testSni(ctx context.Context, ip string, config *ScanConfig, record *ScanRec
 			req, err := http.NewRequest(http.MethodHead, "https://"+"["+ip+"]"+Path, nil)
 			req.Host = Host
 			if err != nil {
+				logFail(2, ip, "status", fmt.Sprintf("sni=%s host=%s path=%s error=build request: %s", serverName, Host, Path, err.Error()))
 				tlsconn.Close()
-				//fmt.Println("build req error")
 				return false
 			}
 			tlsconn.SetDeadline(time.Now().Add(config.ScanMaxRTT - time.Since(start)))
 			//resp, err := httputil.NewClientConn(tlsconn, nil).Do(req)
 			resp, err := httpconn.Do(req)
 			if err != nil {
-				//fmt.Println("httpconn error")
-				//fmt.Println(err)
+				logFail(2, ip, "status", fmt.Sprintf("sni=%s host=%s path=%s error=%s", serverName, Host, Path, err.Error()))
 				tlsconn.Close()
 				return false
 			}
@@ -86,7 +91,7 @@ func testSni(ctx context.Context, ip string, config *ScanConfig, record *ScanRec
 			// 	resp.Body.Close()
 			// }
 			if resp.StatusCode != Code {
-				fmt.Println("Status Code:", resp.StatusCode)
+				logFail(2, ip, "status", fmt.Sprintf("sni=%s host=%s path=%s want_code=%d got_code=%d", serverName, Host, Path, Code, resp.StatusCode))
 				tlsconn.Close()
 				return false
 			}
