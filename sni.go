@@ -70,7 +70,7 @@ func testSni(ctx context.Context, ip string, config *ScanConfig, record *ScanRec
 			}
 		}
 		if config.Level > 2 {
-			req, err := http.NewRequest(http.MethodHead, "https://"+"["+ip+"]"+Path, nil)
+			req, err := http.NewRequest(http.MethodHead, "https://"+net.JoinHostPort(ip, "443")+Path, nil)
 			req.Host = Host
 			if err != nil {
 				logFail(2, ip, "status", fmt.Sprintf("sni=%s host=%s path=%s error=build request: %s", serverName, Host, Path, err.Error()))
