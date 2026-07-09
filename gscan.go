@@ -22,6 +22,7 @@ type ScanConfig struct {
 	HTTPVerifyHosts  []string
 	VerifyCommonName string
 	HTTPPath         string
+	HTTPMethod       string
 	ValidStatusCode  int
 	HandshakeTimeout time.Duration
 	ScanMinRTT       time.Duration
@@ -106,6 +107,9 @@ func (gs *GScanner) loadConfig(cfgFile string) error {
 		}
 		if !pathExist(scanConfig.InputFile) {
 			os.Create(scanConfig.InputFile)
+		}
+		if scanConfig.HTTPMethod == "" {
+			scanConfig.HTTPMethod = "HEAD"
 		}
 
 		scanConfig.ScanMinRTT *= time.Millisecond

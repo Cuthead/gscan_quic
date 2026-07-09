@@ -98,6 +98,8 @@
 		// ServerName is mandatory
 		"HTTPVerifyHosts": ["www.google.com.hk"],
 		"HTTPPath": "/",
+		// HTTPMethod 是发起 http 测试请求使用的方法, 默认 HEAD
+		"HTTPMethod": "HEAD",
 		"VerifyCommonName": "about.google",
 		"ValidStatusCode": 200,
 		"HandshakeTimeout": 10000,

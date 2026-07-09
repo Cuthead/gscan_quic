@@ -54,6 +54,8 @@
 	"SNI": {
 		//"ScanCountPerIP": 1,
 		//"ServerName": ["www.bing.com", "duckduckgo.com"],
+		// HTTPMethod is the HTTP method used for the Level>2 request; defaults to HEAD.
+		//"HTTPMethod": "HEAD",
 		//"HandshakeTimeout": 2500,
 		//"ScanMinRTT":       0,
 		//"ScanMaxRTT":       3000,
