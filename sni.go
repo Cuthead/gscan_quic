@@ -65,7 +65,7 @@ func testSni(ctx context.Context, ip string, config *ScanConfig, record *ScanRec
 			req, err := http.NewRequest(Method, "https://"+net.JoinHostPort(ip, "443")+Path, nil)
 			req.Host = Host
 			if err != nil {
-				logFail(2, ip, "status", fmt.Sprintf("sni=%s host=%s method=%s path=%s error=build request: %s", serverName, Host, Method, Path, err.Error()))
+				logFail(2, ip, "http", fmt.Sprintf("sni=%s host=%s method=%s path=%s error=build request: %s", serverName, Host, Method, Path, err.Error()))
 				tlsconn.Close()
 				return false
 			}
@@ -81,7 +81,7 @@ func testSni(ctx context.Context, ip string, config *ScanConfig, record *ScanRec
 			tlsconn.SetDeadline(time.Now().Add(config.ScanMaxRTT - time.Since(start)))
 			resp, err := httpconn.Do(req)
 			if err != nil {
-				logFail(2, ip, "status", fmt.Sprintf("sni=%s host=%s method=%s path=%s error=%s", serverName, Host, Method, Path, err.Error()))
+				logFail(2, ip, "http", fmt.Sprintf("sni=%s host=%s method=%s path=%s error=%s", serverName, Host, Method, Path, err.Error()))
 				tlsconn.Close()
 				return false
 			}
