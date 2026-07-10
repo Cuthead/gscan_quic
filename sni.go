@@ -14,16 +14,6 @@ func testSni(ctx context.Context, ip string, config *ScanConfig, record *ScanRec
 	tlscfg := &tls.Config{
 		InsecureSkipVerify: true,
 	}
-	tr := &http.Transport{
-		TLSClientConfig:       tlscfg,
-		ResponseHeaderTimeout: config.ScanMaxRTT,
-	}
-	httpconn := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-		Transport: tr,
-	}
 	var Host string
 	var VerifyCN string
 	var Path string
@@ -79,8 +69,16 @@ func testSni(ctx context.Context, ip string, config *ScanConfig, record *ScanRec
 				tlsconn.Close()
 				return false
 			}
+			httpconn := &http.Client{
+				Transport: &http.Transport{
+					DialTLS: func(network, addr string) (net.Conn, error) { return tlsconn, nil },
+				},
+				CheckRedirect: func(req *http.Request, via []*http.Request) error {
+					return http.ErrUseLastResponse
+				},
+				Timeout: config.ScanMaxRTT - time.Since(start),
+			}
 			tlsconn.SetDeadline(time.Now().Add(config.ScanMaxRTT - time.Since(start)))
-			//resp, err := httputil.NewClientConn(tlsconn, nil).Do(req)
 			resp, err := httpconn.Do(req)
 			if err != nil {
 				logFail(2, ip, "status", fmt.Sprintf("sni=%s host=%s method=%s path=%s error=%s", serverName, Host, Method, Path, err.Error()))
@@ -100,10 +98,9 @@ func testSni(ctx context.Context, ip string, config *ScanConfig, record *ScanRec
 		}
 
 		tlsconn.Close()
-		httpconn.CloseIdleConnections()
 
 		rtt := time.Since(start)
-		if rtt < config.ScanMinRTT {
+		if rtt < config.ScanMinRTT || rtt > config.ScanMaxRTT {
 			return false
 		}
 		record.RTT += rtt

@@ -126,7 +126,7 @@ func testQuic(ctx context.Context, ip string, config *ScanConfig, record *ScanRe
 		}
 	}
 
-	if rtt := time.Since(start); rtt > config.ScanMinRTT {
+	if rtt := time.Since(start); rtt > config.ScanMinRTT && rtt <= config.ScanMaxRTT {
 		record.RTT += rtt
 		return true
 	}

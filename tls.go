@@ -101,7 +101,7 @@ func testTls(ctx context.Context, ip string, config *ScanConfig, record *ScanRec
 		}
 	}
 
-	if rtt := time.Since(start); rtt > config.ScanMinRTT {
+	if rtt := time.Since(start); rtt > config.ScanMinRTT && rtt <= config.ScanMaxRTT {
 		record.RTT += rtt
 		return true
 	}
