@@ -77,10 +77,12 @@ func (gs *GScanner) testIPWorker(ctx context.Context, ipQueue chan string) {
 			pingErr := Ping(ip, gs.ScanMaxPingRTT)
 			if pingErr != nil {
 				logFail(5, ip, "ping", pingErr.Error())
+				gs.IncScanCounter()
 				continue
 			}
 			if time.Since(start) < gs.ScanMinPingRTT {
 				logFail(5, ip, "ping", "rtt_too_low")
+				gs.IncScanCounter()
 				continue
 			}
 		}
